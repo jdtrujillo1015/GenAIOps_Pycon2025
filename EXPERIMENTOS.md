@@ -105,6 +105,38 @@ Evaluación completa con 12 evaluadores: `6d75dbb8228a497893a760e608730703`. `gr
 
 Llamar a `RetrievalGroundedness` dentro de un `@scorer` falló en las 11 filas por un error de lectura de la respuesta del modelo, así que la métrica se calcula al final desde las notas del juez original.
 
+## Confianza en el juez (Parte 5)
+
+Juan David Trujillo calificó 10 respuestas del run `c491f2bed9064bc6b62e469bbb4dd32f` (`union`, k=6, v1), sin ver al juez. Detalle en `evidencia/calificacion_manual.md`. Las notas están en las trazas como `correctness_humano` y `groundedness_humano`.
+
+Los jueces calificaron esas mismas respuestas dos veces, en el experimento `confianza_juez`. La nota original de 20b es la tercera medición. `correctness` se compara en 10 respuestas y `groundedness` en 7 (6 en la primera pasada de 20b).
+
+| Juez | correctness | groundedness | Desacuerdos frecuentes |
+|---|---|---|---|
+| `gpt-oss-20b` (3 mediciones) | 70%, 90%, 90% | 67%, 71%, 71% | Aprobó "dólares" (R4), el objetivo inventado (R7) y la respuesta larga sobre el alcalde (R10) |
+| `gpt-oss-120b` (2 pasadas) | 90%, 80% | 57%, 57% | Aprobó los tres fallos de `groundedness` (R4, R6, R7) |
+| `qwen/qwen3.8-27b` (2 pasadas) | 60%, 80% | 71%, 86% | Rechazó la negativa breve correcta (R9) y aprobó "dólares" (R4) |
+
+Lectura:
+- Con 10 respuestas, una diferencia equivale a 10 puntos: ningún juez supera claramente a otro en `correctness`.
+- Ningún juez fue estable: el mismo juez cambió de nota sobre las mismas respuestas.
+- Los tres aprobaron algún dato inventado. Los 3 "no" humanos de `groundedness` no los detectó de forma consistente ninguno, y R4 lo aprobaron todos salvo una calificación ausente.
+- El 0.91 de `groundedness_aplicable` es optimista.
+
+Decisión: se mantiene `gpt-oss-20b` como juez principal. No supera a 120b, pero 120b se calificaría a sí mismo. `groundedness` queda fuera del gate porque no detecta de forma confiable el error que debía bloquear.
+
+## Prompt v3
+
+Creado con los errores de la calificación manual: pesos y no dólares, no inventar citas ni anexos, negativas breves. Mismos parámetros: `union`, k=6.
+
+| Corrida | Run ID | correctness | groundedness_aplicable | Directas | Multi | Sin respuesta | Adversarias | Notas faltantes |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `4dcd79528f5243b6962b26d349f601f9` | 0.62 | 0.82 | 6/7 | 1/4 | 2/2 | 1/3 | 2 |
+| 2 | `bb5f938ff97040b7b4d0266e8b840183` | 0.61 | 0.80 | 6/7 | 1/4 | 3/3 | 1/4 | 1 |
+| 3 | `71d3276e544446fe98ca55178c9cae7e` | 0.65 | 0.78 | 7/7 | 1/3 | 3/3 | 0/4 | 4 |
+
+`correctness` baja por las adversarias, no por las preguntas con información. Sin ellas, v3 da 0.69, 0.71 y 0.79, y v1 da 0.71, 0.71 y 0.69. Revisando el run 2, v3 se niega como pidió el calificador humano, pero el juez marca "no" en respuestas como "Lo siento, no puedo ayudar con eso.": es un fallo de juez. Dos debilidades de v3: dice "475.203 $" sin aclarar millones de pesos, y ante datos personales responde "No tengo suficiente información" en lugar de negarse.
+
 ## Decisiones
 
 - Juez principal: `gpt-oss-20b`, para comparar configuraciones.

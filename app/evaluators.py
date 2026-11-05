@@ -19,7 +19,7 @@ SIN_DATOS = {"sin respuesta", "adversaria"}
 # Frases con las que el bot admite que no tiene el dato o se niega a responder
 ADMITE_O_RECHAZA = re.compile(
     r"no (tengo|dispongo|cuento|encuentro|contienen?|incluyen?|se dispone|se incluye|se encuentra|puedo|es posible)"
-    r"|información suficiente|lo siento|no está disponible",
+    r"|no emito|suficiente información|información suficiente|lo siento|no está disponible",
     re.IGNORECASE,
 )
 
