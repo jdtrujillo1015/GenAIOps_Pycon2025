@@ -51,6 +51,41 @@ Trazas del run `0847bdb49ec64118889eb74656ce42fd`. Dato clave = texto que deber�
 
 De los 9 fallos de `correctness` en este run, 8 son de recuperación (el dato clave no llegó al modelo) y 1 de juez. No hubo fallos de generación: cuando faltó el dato, el bot lo admitió en lugar de inventar.
 
+## Mejora de la recuperación
+
+La serie final mostró que los parámetros no bastaban, así que se probó cambiar cómo se recupera. Modos (`RETRIEVER_MODE`):
+- `vector`: embeddings, entrega fragmentos. Es el modo original.
+- `palabras`: BM25 con el nombre del documento, entrega páginas completas.
+- `union`: `vector` + `palabras`, entrega páginas completas.
+
+### Prueba sin LLM
+
+Datos clave que llegan al modelo: 15 datos de 11 preguntas, chunk 512/50. Las mismas preguntas se usaron para elegir la estrategia, así que el resultado puede ser optimista.
+
+| Estrategia | Preguntas completas | Datos clave | Contexto aproximado |
+|---|---|---|---|
+| `vector` k=4, fragmentos (original) | 3/11 | 3/15 | n/d |
+| Híbrida k=4, fragmentos | 4/11 | 4/15 | n/d |
+| `vector` k=4 + página | 5/11 | 5/15 | 2.300 tokens |
+| `palabras` k=4 + página | 7/11 | 9/15 | 2.050 tokens |
+| `union` k=4 + página | 7/11 | 9/15 | 4.000 tokens |
+| `union` k=6 + página | 8/11 | 10/15 | 6.100 tokens |
+
+### Evaluación con LLM
+
+Mismo juez y dataset de la serie final. Chunk 512/50.
+
+| Configuración | Run ID | correctness | groundedness | Directas | Multi | Sin respuesta | Adversarias | Notas faltantes |
+|---|---|---|---|---|---|---|---|---|
+| `palabras`, k=4, v1 | `56378bfa36bc422fb33dd3e63659f4ab` | 0.62 | 0.50 | n/d | n/d | n/d | n/d | Al menos 2 |
+| `union`, k=4, v1 | `4a063275e7604b55bceb6cb9b6d1b4bb` | 0.71 | 0.39 | 7/7 | 0/3 | 3/3 | 2/4 | 1 |
+| `union`, k=6, v1, corrida 1 | `f7365a15ac4c4eb28f94982a251921f1` | 0.72 | 0.65 | 5/7 | 2/4 | 3/3 | 3/4 | 1 |
+| `union`, k=6, v1, corrida 2 | `c491f2bed9064bc6b62e469bbb4dd32f` | 0.78 | 0.50 | 6/7 | 1/4 | 3/3 | 4/4 | 0 |
+| `union`, k=6, v1, corrida 3 | `f8e365a7cff8430e80de3c41971eeef3` | 0.76 | 0.50 | 5/7 | 1/3 | 3/3 | 4/4 | 3 |
+| `union`, k=6, v2 | `46bffbbad2534b22a0f88794af55d683` | 0.53 | 0.56 | 5/7 | 1/3 | 3/3 | 0/4 | 1 |
+
+`union` con k=6 y v1 promedia 0.75 en `correctness`, frente a 0.50 de la base. La mejora supera el ruido observado, que fue de 0.06 entre corridas. El costo es más contexto: cerca de 6.100 tokens por pregunta. Falta revisar por qué v2 cae a 0/4 en adversarias.
+
 ## Decisiones
 
 - Juez principal: `gpt-oss-20b`, para comparar configuraciones.
