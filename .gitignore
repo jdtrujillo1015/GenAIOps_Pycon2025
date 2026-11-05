@@ -12,11 +12,13 @@ mlflow.db
 mlartifacts/
 tmp/
 vectorstore/
+data/fuentes/
 *.log
 
 
 # Python virtual environments
 venv/
+.venv/
 .envrc
 
 # DVC cache (si se usa)
