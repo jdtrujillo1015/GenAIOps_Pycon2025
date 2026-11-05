@@ -36,8 +36,12 @@ def enable_tracing():
         _autolog_enabled = True
 
 
+def retriever_mode() -> str:
+    return (os.getenv("RETRIEVER_MODE") or "vector").strip().lower()
+
+
 def app_config(prompt_uri: str, k: int) -> dict:
-    return {**describe(), "prompt": prompt_uri, "k": str(k)}
+    return {**describe(), "prompt": prompt_uri, "k": str(k), "retriever_mode": retriever_mode()}
 
 
 def _prompt_label(prompt_uri: str) -> str:
@@ -54,6 +58,8 @@ def app_version_name(prompt_uri: str, k: int) -> str:
     """
     cfg = describe()
     raw = f"rag-{cfg['llm_provider']}-{cfg['llm_model']}-{_prompt_label(prompt_uri)}-k{k}"
+    if retriever_mode() != "vector":
+        raw += f"-{retriever_mode()}"
     return re.sub(r"[^A-Za-z0-9_-]+", "-", raw)
 
 
