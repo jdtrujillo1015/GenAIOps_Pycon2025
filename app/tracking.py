@@ -37,7 +37,7 @@ def enable_tracing():
 
 
 def retriever_mode() -> str:
-    return (os.getenv("RETRIEVER_MODE") or "vector").strip().lower()
+    return (os.getenv("RETRIEVER_MODE") or "union").strip().lower()
 
 
 def app_config(prompt_uri: str, k: int) -> dict:

@@ -114,7 +114,7 @@ _STOPWORDS = set("""a al algo como con cual cuales cuantas cuantos de del desde 
     ese esta este fue fueron la las lo los mas no o para por que se segun si sobre son su sus un una y""".split())
 
 def get_retriever_mode():
-    mode = (os.getenv("RETRIEVER_MODE") or "vector").strip().lower()
+    mode = (os.getenv("RETRIEVER_MODE") or "union").strip().lower()
     if mode not in RETRIEVER_MODES:
         raise ValueError(f"RETRIEVER_MODE no soportado: '{mode}'. Usa uno de: {RETRIEVER_MODES}")
     return mode
@@ -144,7 +144,7 @@ class PageRetriever(BaseRetriever):
         keys = dict.fromkeys((d.metadata["documento"], d.metadata["page"]) for d in hits)
         return [self.pages[key] for key in keys]
 
-def build_retriever(vectordb, k=4):
+def build_retriever(vectordb, k=6):
     mode = get_retriever_mode()
     if mode == "vector":
         return vectordb.as_retriever(search_kwargs={"k": k})
@@ -161,7 +161,7 @@ def build_retriever(vectordb, k=4):
     bm25 = BM25Okapi([_tokens(f"{f.metadata['documento']} {f.page_content}") for f in fragments])
     return PageRetriever(vectordb=vectordb, fragments=fragments, bm25=bm25, pages=pages, k=k, mode=mode)
 
-def build_chain(vectordb, prompt_version=DEFAULT_PROMPT, k=4):
+def build_chain(vectordb, prompt_version=DEFAULT_PROMPT, k=6):
     prompt = load_prompt(prompt_version)
     retriever = build_retriever(vectordb, k=k)
     return ConversationalRetrievalChain.from_llm(

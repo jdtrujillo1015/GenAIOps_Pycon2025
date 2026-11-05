@@ -148,7 +148,7 @@ def render_sidebar():
         format_func=lambda o: o.replace("prompts:/", ""),
         help="@alias o versión fija. Registra cambios con `python -m app.prompt_registry`",
     )
-    k = st.sidebar.slider("Fragmentos a recuperar (k)", 1, 10, 4,
+    k = st.sidebar.slider("Resultados por búsqueda (k)", 1, 10, 6,
                           help="Cuántos fragmentos de los PDFs se envían al LLM como contexto")
 
     st.sidebar.button("🗑️ Nueva conversación", width="stretch",

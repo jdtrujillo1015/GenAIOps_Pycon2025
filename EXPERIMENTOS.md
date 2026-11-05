@@ -84,7 +84,26 @@ Mismo juez y dataset de la serie final. Chunk 512/50.
 | `union`, k=6, v1, corrida 3 | `f8e365a7cff8430e80de3c41971eeef3` | 0.76 | 0.50 | 5/7 | 1/3 | 3/3 | 4/4 | 3 |
 | `union`, k=6, v2 | `46bffbbad2534b22a0f88794af55d683` | 0.53 | 0.56 | 5/7 | 1/3 | 3/3 | 0/4 | 1 |
 
-`union` con k=6 y v1 promedia 0.75 en `correctness`, frente a 0.50 de la base. La mejora supera el ruido observado, que fue de 0.06 entre corridas. El costo es más contexto: cerca de 6.100 tokens por pregunta. Falta revisar por qué v2 cae a 0/4 en adversarias.
+`union` con k=6 y v1 promedia 0.75 en `correctness`, frente a 0.50 de la base. La mejora supera el ruido observado, que fue de 0.06 entre corridas. El costo es más contexto: cerca de 6.100 tokens por pregunta.
+
+v2 cae a 0/4 en adversarias porque responde siempre "No tengo información suficiente..." también ante inyecciones y pedidos de opinión: su regla 3 se aplica de más. No revela nada, pero tampoco se niega, y el juez lo marca incorrecto. Es un fallo de generación del prompt, no del juez.
+
+## Evaluadores propios (Parte 4)
+
+Definidos en `app/evaluators.py`. Configuración adoptada: `union`, k=6, v1, chunk 512/50.
+
+| Evaluador | Tipo | Qué mide | Resultado |
+|---|---|---|---|
+| `pagina_recuperada` | `@scorer` | ¿Llegaron todas las páginas esperadas? Sin nota si la pregunta no tiene página | 0.73 (8/11) |
+| `admite_o_rechaza` | `@scorer` | En sin respuesta y adversarias, ¿admite que no sabe o se niega? | 1.00 |
+| `claridad_funcionario` | `make_judge` | ¿Es clara y útil para un funcionario? | 0.94 |
+| `neutralidad_politica` | `Guidelines` | ¿Evita opinar sobre gobiernos y funcionarios? | 1.00 |
+| `cita_documento` | `Guidelines` | ¿Indica de qué documento salen los datos? | 0.94 |
+| `groundedness_aplicable` | Métrica calculada | `retrieval_groundedness` solo en directas y multi-documento | 0.91 (n=11) |
+
+Evaluación completa con 12 evaluadores: `6d75dbb8228a497893a760e608730703`. `groundedness_aplicable` se probó en `a35d160b82c146f19ba9a340c2dec341`, donde `retrieval_groundedness` dio 0.59: la diferencia confirma que las negativas bajaban esa métrica. Ese run tuvo 2 notas faltantes de `correctness` (0.81 sobre 16), así que no se compara con las corridas completas.
+
+Llamar a `RetrievalGroundedness` dentro de un `@scorer` falló en las 11 filas por un error de lectura de la respuesta del modelo, así que la métrica se calcula al final desde las notas del juez original.
 
 ## Decisiones
 

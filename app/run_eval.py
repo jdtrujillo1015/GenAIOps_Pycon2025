@@ -30,6 +30,7 @@ from mlflow.genai.scorers import (
     Safety,
 )
 
+from app.evaluators import get_custom_scorers
 from app.llm_provider import describe, get_judge_model_uri
 from app.prompt_registry import DEFAULT_PROMPT
 from app.rag_pipeline import build_chain, load_vectorstore_from_disk
@@ -41,8 +42,9 @@ load_dotenv()
 PROMPT_VERSION = os.getenv("PROMPT_VERSION") or DEFAULT_PROMPT
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 512)        # deben coincidir con el índice construido
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP") or 50)
-K = int(os.getenv("RETRIEVER_K") or 4)
+K = int(os.getenv("RETRIEVER_K") or 6)
 DATASET_PATH = "tests/eval_dataset.json"
+CON_RESPUESTA = {"directa", "multi-documento"}
 
 # Paralelismo de MLflow. Por defecto evalúa ~10 filas x 10 jueces a la vez, lo que
 # supera los límites gratuitos de Groq (30 solicitudes y 8K tokens por minuto).
@@ -61,7 +63,11 @@ def load_eval_dataset(path=DATASET_PATH):
     return [
         {
             "inputs": {"question": item["question"]},
-            "expectations": {"expected_response": item["answer"]},
+            "expectations": {
+                "expected_response": item["answer"],
+                "tipo": item.get("type", ""),
+                "source": item.get("source", ""),
+            },
         }
         for item in raw
     ]
@@ -93,6 +99,7 @@ def get_scorers(judge_model: str):
             ),
             model=judge_model,
         ),
+        *get_custom_scorers(judge_model),          # evaluadores propios del dominio
     ]
     selected = [n.strip() for n in os.getenv("EVAL_SCORERS", "").split(",") if n.strip()]
     if selected:
@@ -102,6 +109,26 @@ def get_scorers(judge_model: str):
                              f"Disponibles: {[sc.name for sc in scorers]}")
         scorers = [sc for sc in scorers if sc.name in selected]
     return scorers
+
+
+def log_groundedness_aplicable(run):
+    """
+    Promedio de retrieval_groundedness solo en preguntas con respuesta en los documentos.
+    Las negativas y los "no tengo información" no citan fragmentos, así que el juez las
+    marca "no" aunque sean correctas.
+    """
+    notas = []
+    traces = mlflow.search_traces(locations=[run.info.experiment_id], run_id=run.info.run_id, return_type="list")
+    for trace in traces:
+        assessments = trace.info.assessments
+        tipo = next((a.expectation.value for a in assessments if a.name == "tipo" and a.expectation), "")
+        if tipo not in CON_RESPUESTA:
+            continue
+        notas += [str(a.feedback.value) == "yes" for a in assessments
+                  if a.name == "retrieval_groundedness" and a.feedback and not a.feedback.error]
+    if notas:
+        mlflow.log_metric("groundedness_aplicable/mean", sum(notas) / len(notas))
+        mlflow.log_metric("groundedness_aplicable/n", len(notas))
 
 
 def main():
@@ -124,7 +151,7 @@ def main():
         return result["answer"]
 
     run_name = f"{describe()['llm_provider']}|{prompt_uri.replace('prompts:/', '')}|k{K}"
-    with mlflow.start_run(run_name=run_name):
+    with mlflow.start_run(run_name=run_name) as run:
         mlflow.log_params({
             **app_config(prompt_uri, K),
             "chunk_size": CHUNK_SIZE,
@@ -138,9 +165,11 @@ def main():
             scorers=scorers,
             model_id=model_id,
         )
+        log_groundedness_aplicable(run)
 
+    metrics = mlflow.get_run(run.info.run_id).data.metrics
     print("\n📈 Resultados agregados:")
-    for name, value in sorted(results.metrics.items()):
+    for name, value in sorted(metrics.items()):
         print(f"   {name:40s} {value:.2f}" if isinstance(value, (int, float)) else f"   {name}: {value}")
     print(f"\n🔎 Detalle por pregunta (trazas + razonamiento de cada juez): mlflow ui → "
           f"experimento '{EVAL_EXPERIMENT}' → run '{run_name}'")
