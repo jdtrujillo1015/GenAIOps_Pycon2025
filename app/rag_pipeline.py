@@ -22,12 +22,23 @@ load_dotenv()
 DATA_DIR = "data/pdfs"
 VECTOR_DIR = get_vectorstore_dir()  # vectorstore/openai o vectorstore/fastembed
 
+# Nombre legible de cada PDF: el modelo lo recibe junto al fragmento para poder citarlo
+DOCUMENT_NAMES = {
+    "piscc-medellin-2024-2027.pdf": "PISCC 2024-2027",
+    "Diagnostico_Politica_Publica.pdf": "Diagnóstico para la política pública de seguridad y convivencia",
+    "Plan_Desarrollo_Seguridad_2024-2027.pdf": "Plan de Desarrollo Distrital 2024-2027",
+}
+DOCUMENT_PROMPT = PromptTemplate.from_template("[Documento: {documento}]\n{page_content}")
+
 def load_documents(path=DATA_DIR):
     docs = []
     for file in os.listdir(path):
         if file.endswith(".pdf"):
             loader = PyPDFLoader(os.path.join(path, file))
-            docs.extend(loader.load())
+            pages = loader.load()
+            for page in pages:
+                page.metadata["documento"] = DOCUMENT_NAMES.get(file, os.path.splitext(file)[0])
+            docs.extend(pages)
     return docs
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 512)
@@ -95,6 +106,6 @@ def build_chain(vectordb, prompt_version=DEFAULT_PROMPT, k=4):
     return ConversationalRetrievalChain.from_llm(
         llm=get_llm(temperature=0),
         retriever=retriever,
-        combine_docs_chain_kwargs={"prompt": prompt},
+        combine_docs_chain_kwargs={"prompt": prompt, "document_prompt": DOCUMENT_PROMPT},
         return_source_documents=True  # para mostrar las referencias en la UI
     )
