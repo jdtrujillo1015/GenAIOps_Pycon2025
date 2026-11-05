@@ -120,7 +120,7 @@ Los jueces calificaron esas mismas respuestas dos veces, en el experimento `conf
 Lectura:
 - Con 10 respuestas, una diferencia equivale a 10 puntos: ningún juez supera claramente a otro en `correctness`.
 - Ningún juez fue estable: el mismo juez cambió de nota sobre las mismas respuestas.
-- Los tres aprobaron algún dato inventado. Los 3 "no" humanos de `groundedness` no los detectó de forma consistente ninguno, y R4 lo aprobaron todos salvo una calificación ausente.
+- Los tres aprobaron algún dato inventado. En `groundedness`, las 7 mediciones aprobaron R4 ("dólares"), que el calificador humano marcó "no".
 - El 0.91 de `groundedness_aplicable` es optimista.
 
 Decisión: se mantiene `gpt-oss-20b` como juez principal. No supera a 120b, pero 120b se calificaría a sí mismo. `groundedness` queda fuera del gate porque no detecta de forma confiable el error que debía bloquear.
