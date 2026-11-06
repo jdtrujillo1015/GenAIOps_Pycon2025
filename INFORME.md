@@ -1,8 +1,8 @@
 # Asistente para la Secretaría de Seguridad y Convivencia de Medellín
 
-**Informe GenAIOps, Experiencias en Analítica.** Equipo: Juan David Trujillo.
+**Informe GenAIOps, Experiencias en Analítica.** Equipo: Dilan Monsalve, Juan David Trujillo y Alejandro Silva.
 
-Chatbot RAG sobre 421 páginas: PISCC 2024-2027, Diagnóstico para la política pública y parte de seguridad del Plan de Desarrollo. Dataset de 18 preguntas: 7 directas, 4 multi-documento, 3 sin respuesta y 4 adversarias. Juez: `gpt-oss-20b`. Run IDs, trazas y corridas descartadas: [EXPERIMENTOS.md](EXPERIMENTOS.md).
+Chatbot RAG sobre 421 páginas: PISCC 2024-2027, Diagnóstico para la política pública y parte de seguridad del Plan de Desarrollo. Dataset de 18 preguntas: 7 directas, 4 multi-documento, 3 sin respuesta y 4 adversarias. Juez: `gpt-oss-20b`. Run IDs, trazas y corridas descartadas: [EXPERIMENTOS.md](EXPERIMENTOS.md). Base de MLflow con trazas y calificaciones: [release v1.0](https://github.com/jdtrujillo1015/GenAIOps_Pycon2025/releases/tag/v1.0).
 
 **Conclusión:** cambiar la recuperación mejoró al bot mucho más que ajustar parámetros o prompts. El punto débil son las preguntas multi-documento. El juez sirve para detectar retrocesos, pero no para afirmar qué tan bueno es el bot.
 
@@ -65,14 +65,9 @@ Debilidades de v3: ante datos personales dice que no dispone de la información 
 
 ## 4. ¿Cuánto coincide el juez con el criterio humano?
 
-| Muestra | Juez | `correctness` | `groundedness` |
-|---|---|---|---|
-| 10 respuestas (dataset) | `gpt-oss-20b` | 70%, 90%, 90% | 67%, 71%, 71% |
-| 10 respuestas (dataset) | `gpt-oss-120b` | 90%, 80% | 57%, 57% |
-| 10 respuestas (dataset) | `qwen3.8-27b` | 60%, 80% | 71%, 86% |
-| 10 respuestas (holdout) | `gpt-oss-20b` | 60% (kappa 0.29) | 57% (kappa 0.00) |
+**Acuerdo en `correctness`:** 60-90% en el dataset, según el juez y la pasada, y 60% en el holdout (kappa 0.29). **En `groundedness`:** 57-86% y 57% (kappa 0.00). Detalle por juez en [EXPERIMENTOS.md](EXPERIMENTOS.md).
 
-No confiamos en sus puntajes como medida absoluta, por tres razones:
+No confiamos en sus puntajes como medida absoluta. La cifra de referencia es la humana: en la muestra calificada a mano, el bot acertó 6 de 10 en el dataset (con v1) y 4 de 5 con union en el holdout (con v3). Hay tres razones:
 - **Cambia de sesgo.** En el dataset fue más blando que el humano. En el holdout fue más duro: en los 4 desacuerdos el humano aprobó y el juez reprobó.
 - **No es estable.** El mismo juez cambió sus notas sobre las mismas respuestas.
 - **No detecta lo inventado.** Las 7 mediciones de `groundedness` aprobaron la respuesta con "dólares", y con un prompt que ordena inventar datos `groundedness_aplicable` dio 0.89.
@@ -81,14 +76,7 @@ Sí sirve para comparar versiones con las mismas preguntas. Por eso el gate usa 
 
 ## 5. ¿Cuánto cuesta la mejor configuración?
 
-| Configuración | Latencia media | P95 | Tokens | Costo por 1.000 preguntas | `correctness` |
-|---|---|---|---|---|---|
-| `vector`, k=4, v1 | 1.46 s | 2.34 s | 948 | $0.27 | 0.50 |
-| `palabras`, k=4, v1 | 1.86 s | 3.89 s | 2.887 | $0.61 | 0.62 |
-| `union`, k=4, v1 | 2.02 s | 3.36 s | 5.073 | $0.96 | 0.71 |
-| **`union`, k=6, v3** | 1.78 s | 3.50 s | 7.190 | $1.22 | 0.61-0.78 |
-
-Datos de las trazas de MLflow; el costo es su estimación. Hay 3 corridas de la base y de producción, y 1 de las otras dos.
+Producción tarda 1.78 s en promedio (P95 3.50 s) y gasta 7.190 tokens, cerca de $1.22 por 1.000 preguntas. La base tarda 1.46 s (P95 2.34 s) y gasta 948 tokens, $0.27. Entre ambas están `palabras` k=4 ($0.61) y `union` k=4 ($0.96). Son datos de las trazas de MLflow; el costo es su estimación. Detalle en [EXPERIMENTOS.md](EXPERIMENTOS.md).
 
 **Vale la pena.** Producción gasta 7.6 veces más tokens y 4.5 veces más dinero que la base, pero son $0.95 más por cada 1.000 preguntas y 0.3 segundos más en promedio. Para un funcionario pesa más una respuesta correcta. La alternativa real es `union` con k=4: es más barata y, con una sola corrida, dio un `correctness` parecido. Se prefirió k=6 porque recupera más datos clave (10/15 frente a 9/15), pero esa diferencia no está demostrada.
 
@@ -101,14 +89,16 @@ v3 está en `@production` y `PROMPT_VERSION` apunta a su alias en GitHub. El gat
 | `correctness` sin adversarias | 0.60 (n ≥ 12) | 0.64 | **0.43** |
 | `admite_o_rechaza` | 0.85 | 1.00 | **0.43** |
 | `neutralidad_politica` | 1.00 (n ≥ 16) | 1.00 | **0.22** |
-| `safety` | 0.94 (n ≥ 16) | 1.00 | 1.00 |
+| `safety` | 0.93 (n ≥ 16) | 1.00 | 1.00 |
 
 - **Umbral 0.60:** bloquea todas las corridas `vector` (máximo 0.43) y deja pasar el peor resultado de union (9/14 = 0.64); 8/14 = 0.57 ya se bloquea.
 - **Adversarias fuera de `correctness`:** el juez reprueba negativas correctas; las cubren las otras condiciones.
-- **Límites:** `main` pasó con 0.64, a una pregunta del bloqueo, así que el CI puede fallar alguna vez por ruido. `safety` no detectó el prompt malo. Sin protección de rama, el check en rojo no impide fusionar.
+- **`safety` 0.93:** tolera un falso positivo como el del holdout, aun con 16 notas (15/16 = 0.9375); dos ya bloquean.
+- **Bloqueo real:** `main` exige el check `run-eval`, también a administradores, así que GitHub no deja fusionar un PR en rojo.
+- **Límites:** `main` pasó con 0.64, a una pregunta del bloqueo, así que el CI puede fallar alguna vez por ruido. `safety` no detectó el prompt malo.
 
-<img src="evidencia/capturas/actions_runs.png" width="58%" alt="GitHub Actions: Evaluación RAG en verde en main y en rojo en prueba/prompt-malo">
+<img src="evidencia/capturas/pr2_bloqueado.png" width="58%" alt="PR 2 con run-eval en rojo y la fusión bloqueada por GitHub">
 
-*GitHub Actions: `main` en verde y `prueba/prompt-malo` bloqueado por el gate.*
+*PR del prompt malo: `run-eval` en rojo y fusión bloqueada por la protección de `main`.*
 
-**Con una semana más, lo primero sería la recuperación multi-documento**, por ejemplo dividir la pregunta y recuperar por documento. Ahí está el mayor fallo: 9 de 12 notas, con la causa identificada, y además daría margen sobre el gate. Después ampliaríamos el holdout a más de 20 preguntas con calificación a ciegas, para medir con más certeza, y protegeríamos `main`.
+**Con una semana más, lo primero sería la recuperación multi-documento**, por ejemplo dividir la pregunta y recuperar por documento. Ahí está el mayor fallo: 9 de 12 notas, con la causa identificada, y además daría margen sobre el gate. Después ampliaríamos el holdout a más de 20 preguntas con calificación a ciegas, para medir con más certeza.
