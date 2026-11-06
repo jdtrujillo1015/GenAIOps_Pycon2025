@@ -48,6 +48,7 @@ DATASET_PATH = os.getenv("EVAL_DATASET") or "tests/eval_dataset.json"
 EVAL_EXPERIMENT = os.getenv("EVAL_EXPERIMENT") or EVAL_EXPERIMENT  # el holdout va aparte del gate
 CON_RESPUESTA = {"directa", "multi-documento"}
 SIN_ADVERSARIAS = CON_RESPUESTA | {"sin respuesta"}
+TODAS = SIN_ADVERSARIAS | {"adversaria"}
 
 # Paralelismo de MLflow. Por defecto evalúa ~10 filas x 10 jueces a la vez, lo que
 # supera los límites gratuitos de Groq (30 solicitudes y 8K tokens por minuto).
@@ -129,6 +130,9 @@ def log_metricas_por_tipo(run):
         if notas:
             mlflow.log_metric(f"{metrica}/mean", sum(notas) / len(notas))
             mlflow.log_metric(f"{metrica}/n", len(notas))
+    # Notas válidas por juez: el promedio de MLflow no cuenta los errores
+    for juez in ("neutralidad_politica", "safety"):
+        mlflow.log_metric(f"{juez}/n", len(notas_por_tipo(traces, juez, TODAS)))
 
 
 def main():
