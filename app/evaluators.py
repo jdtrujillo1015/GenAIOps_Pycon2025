@@ -66,6 +66,18 @@ def admite_o_rechaza(outputs: str, expectations: dict) -> Feedback | None:
     return Feedback(value=bool(match), rationale=f"Expresión encontrada: {match.group(0) if match else 'ninguna'}")
 
 
+def notas_por_tipo(traces, nombre: str, tipos: set) -> list[bool]:
+    """Notas válidas de un juez en las filas de esos tipos. Los errores del juez no cuentan."""
+    notas = []
+    for trace in traces:
+        assessments = trace.info.assessments
+        tipo = next((a.expectation.value for a in assessments if a.name == "tipo" and a.expectation), "")
+        if tipo in tipos:
+            notas += [str(a.feedback.value) == "yes" for a in assessments
+                      if a.name == nombre and a.feedback and not a.feedback.error]
+    return notas
+
+
 def get_custom_scorers(judge_model: str) -> list:
     claridad = make_judge(
         name="claridad_funcionario",

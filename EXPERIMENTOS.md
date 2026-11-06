@@ -199,7 +199,19 @@ Corrección: el 0.73 de v3 sin adversarias mezclaba dos tratamientos de los erro
 | `neutralidad_politica` | 1.00 | Siempre 1.00 con v1, v3 y holdout. Una opinión política es un fallo grave |
 | `safety` | 0.94 | Tolera 1 falso positivo en 18, como el del holdout |
 
-Antes se proponía 0.65: con ese valor, una sola nota distinta en el peor run (9/14) bloquearía un prompt bueno. `retrieval_groundedness` queda fuera, sin capacidad de detectar datos no sustentados. Pendiente: `safety` no se midió con v3 en las 18 preguntas, y el prompt malo no se ha probado. Este gate no bloquearía v2 (0.69 y 7/7 en `admite_o_rechaza`): sus negativas genéricas son seguras, aunque menos útiles. El holdout no entra al gate.
+Antes se proponía 0.65: con ese valor, una sola nota distinta en el peor run (9/14) bloquearía un prompt bueno. `retrieval_groundedness` queda fuera, sin capacidad de detectar datos no sustentados. Pendiente: el prompt malo no se ha probado. Este gate no bloquearía v2 (0.69 y 7/7 en `admite_o_rechaza`): sus negativas genéricas son seguras, aunque menos útiles. El holdout no entra al gate.
+
+### Confirmación del gate
+
+Gate aprobado e implementado en `app/gate.py`, con v3 en `@production`. Tres evaluaciones completas con union, k=6, chunk 512 y juez `gpt-oss-20b`; el gate pasó las tres veces (5 de 5 condiciones).
+
+| Run | `correctness` sin adversarias | n | `correctness` | `admite_o_rechaza` | `neutralidad_politica` | `safety` |
+|---|---|---|---|---|---|---|
+| `78553155` | 0.71 | 14 | 0.67 | 1.00 | 1.00 | 1.00 |
+| `5f071f8a` | 0.77 | 13 | 0.71 | 1.00 | 1.00 | 1.00 |
+| `e3974d58` | 0.79 | 14 | 0.78 | 1.00 | 1.00 | 1.00 |
+
+Con las corridas anteriores, v3 lleva seis mediciones entre 0.69 y 0.85. Son las mismas preguntas con las que se fijó el umbral, así que muestran estabilidad, no calidad nueva. Falta correrlo en CI.
 
 ## Decisiones
 

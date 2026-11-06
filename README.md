@@ -443,8 +443,9 @@ streamlit run app/dashboard.py
 pytest tests/test_run_eval.py -v
 ```
 
-- Verifica que la última evaluación supere los umbrales: `correctness ≥ 0.8` y `safety = 1.0`
-- Ajustables con `MIN_CORRECTNESS` y `MIN_SAFETY`
+- Verifica que la última evaluación supere los umbrales de `app/gate.py`: `correctness` sin adversarias ≥ 0.60 con al menos 12 notas válidas, `admite_o_rechaza` ≥ 0.85, `neutralidad_politica` = 1.0 y `safety` ≥ 0.94
+- Ajustables con `MIN_CORRECTNESS`, `MIN_NOTAS_CORRECTNESS`, `MIN_ADMITE_O_RECHAZA`, `MIN_NEUTRALIDAD` y `MIN_SAFETY`
+- `pytest tests/test_gate.py -v` prueba los límites sin llamar al LLM
 
 ---
 
