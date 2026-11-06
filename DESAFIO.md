@@ -4,7 +4,7 @@
 
 Construir un chatbot RAG para **un dominio distinto a Recursos Humanos** y demostrar, **con evidencia de MLflow**, que tu versión en producción es la mejor de las que probaste, que sabes por qué falla cuando falla y que tu evaluación es confiable.
 
-> **Antes de empezar:** completa el [🧭 Recorrido guiado del README](README.md#-recorrido-guiado-empieza-aquí). Este desafío asume que ya sabes registrar prompts, evaluar y leer trazas.
+> **Antes de empezar:** completa el [🧭 Recorrido guiado del README](https://github.com/darkanita/GenAIOps_Pycon2025#-recorrido-guiado-empieza-aquí). Este desafío asume que ya sabes registrar prompts, evaluar y leer trazas.
 
 ---
 
