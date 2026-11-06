@@ -1,11 +1,8 @@
 name: Evaluación RAG
 
 on:
+  # Sin filtro de rutas: run-eval es obligatorio en main y debe reportar en todo PR
   push:
-    paths:
-      - 'app/**'
-      - 'tests/**'
-      - '.github/workflows/eval.yml'
   workflow_dispatch:
 
 jobs:
