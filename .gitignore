@@ -32,3 +32,5 @@ app/run_eval_tarea.py
 app/dashboard_tarea.py
 # Material del informe para la profesora
 informe/
+# Material de la sustentación
+presentacion/
