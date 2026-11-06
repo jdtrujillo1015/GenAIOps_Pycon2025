@@ -60,7 +60,7 @@ jobs:
         python app/run_eval.py
 
     - name: Quality gate (umbrales mínimos)
-      run: pytest tests/test_run_eval.py -v
+      run: pytest tests/test_gate.py tests/test_run_eval.py -v
 
     - name: Guardar resultados de MLflow
       if: always()

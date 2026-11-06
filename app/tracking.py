@@ -21,7 +21,7 @@ from mlflow.entities import AssessmentSource, AssessmentSourceType
 
 from app.llm_provider import describe
 
-CHAT_EXPERIMENT = "chatbot_rrhh"
+CHAT_EXPERIMENT = "chatbot_seguridad_medellin"
 EVAL_EXPERIMENT = "rag_evaluation"
 
 _autolog_enabled = False
@@ -36,12 +36,16 @@ def enable_tracing():
         _autolog_enabled = True
 
 
+def retriever_mode() -> str:
+    return (os.getenv("RETRIEVER_MODE") or "union").strip().lower()
+
+
 def app_config(prompt_uri: str, k: int) -> dict:
-    return {**describe(), "prompt": prompt_uri, "k": str(k)}
+    return {**describe(), "prompt": prompt_uri, "k": str(k), "retriever_mode": retriever_mode()}
 
 
 def _prompt_label(prompt_uri: str) -> str:
-    """prompts:/asistente_rrhh/2 → asistente_rrhh-v2 ; app/prompts/v1_x.txt → local-v1_x"""
+    """prompts:/asistente_seguridad_medellin/2 → asistente_seguridad_medellin-v2 ; app/prompts/v1_x.txt → local-v1_x"""
     if prompt_uri.startswith("prompts:/"):
         return prompt_uri.replace("prompts:/", "").replace("/", "-v")
     return "local-" + os.path.splitext(os.path.basename(prompt_uri))[0]
@@ -54,6 +58,8 @@ def app_version_name(prompt_uri: str, k: int) -> str:
     """
     cfg = describe()
     raw = f"rag-{cfg['llm_provider']}-{cfg['llm_model']}-{_prompt_label(prompt_uri)}-k{k}"
+    if retriever_mode() != "vector":
+        raw += f"-{retriever_mode()}"
     return re.sub(r"[^A-Za-z0-9_-]+", "-", raw)
 
 

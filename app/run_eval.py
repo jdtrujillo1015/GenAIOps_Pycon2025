@@ -9,8 +9,9 @@ run del experimento "rag_evaluation", enlazado a la versión de la app
 
 Uso:
     python app/run_eval.py
-    PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo python app/run_eval.py
+    PROMPT_VERSION=prompts:/asistente_seguridad_medellin@v2_citas_neutralidad python app/run_eval.py
     RETRIEVER_K=6 python app/run_eval.py
+    EVAL_DATASET=tests/holdout_dataset.json EVAL_EXPERIMENT=validacion_holdout python app/run_eval.py
     EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py   # solo algunos jueces
 """
 
@@ -30,6 +31,7 @@ from mlflow.genai.scorers import (
     Safety,
 )
 
+from app.evaluators import get_custom_scorers, notas_por_tipo
 from app.llm_provider import describe, get_judge_model_uri
 from app.prompt_registry import DEFAULT_PROMPT
 from app.rag_pipeline import build_chain, load_vectorstore_from_disk
@@ -41,8 +43,12 @@ load_dotenv()
 PROMPT_VERSION = os.getenv("PROMPT_VERSION") or DEFAULT_PROMPT
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 512)        # deben coincidir con el índice construido
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP") or 50)
-K = int(os.getenv("RETRIEVER_K") or 4)
-DATASET_PATH = "tests/eval_dataset.json"
+K = int(os.getenv("RETRIEVER_K") or 6)
+DATASET_PATH = os.getenv("EVAL_DATASET") or "tests/eval_dataset.json"
+EVAL_EXPERIMENT = os.getenv("EVAL_EXPERIMENT") or EVAL_EXPERIMENT  # el holdout va aparte del gate
+CON_RESPUESTA = {"directa", "multi-documento"}
+SIN_ADVERSARIAS = CON_RESPUESTA | {"sin respuesta"}
+TODAS = SIN_ADVERSARIAS | {"adversaria"}
 
 # Paralelismo de MLflow. Por defecto evalúa ~10 filas x 10 jueces a la vez, lo que
 # supera los límites gratuitos de Groq (30 solicitudes y 8K tokens por minuto).
@@ -61,7 +67,11 @@ def load_eval_dataset(path=DATASET_PATH):
     return [
         {
             "inputs": {"question": item["question"]},
-            "expectations": {"expected_response": item["answer"]},
+            "expectations": {
+                "expected_response": item["answer"],
+                "tipo": item.get("type", ""),
+                "source": item.get("source", ""),
+            },
         }
         for item in raw
     ]
@@ -87,11 +97,13 @@ def get_scorers(judge_model: str):
         Guidelines(
             name="tono_profesional",
             guidelines=(
-                "La respuesta debe tener un tono formal y profesional, apropiado "
-                "para un asistente de Recursos Humanos, y no debe inventar políticas."
+                "La respuesta debe tener un tono formal e institucional, apropiado para un "
+                "asistente de la Secretaría de Seguridad y Convivencia de Medellín, y no debe "
+                "inventar cifras, metas ni programas."
             ),
             model=judge_model,
         ),
+        *get_custom_scorers(judge_model),          # evaluadores propios del dominio
     ]
     selected = [n.strip() for n in os.getenv("EVAL_SCORERS", "").split(",") if n.strip()]
     if selected:
@@ -101,6 +113,26 @@ def get_scorers(judge_model: str):
                              f"Disponibles: {[sc.name for sc in scorers]}")
         scorers = [sc for sc in scorers if sc.name in selected]
     return scorers
+
+
+def log_metricas_por_tipo(run):
+    """
+    Promedios que el agregado de MLflow no separa por tipo de pregunta.
+    - groundedness_aplicable: las negativas no citan fragmentos y el juez las marca "no".
+    - correctness_sin_adversarias: el juez reprueba negativas breves que son correctas.
+    """
+    traces = mlflow.search_traces(locations=[run.info.experiment_id], run_id=run.info.run_id, return_type="list")
+    for metrica, juez, tipos in [
+        ("groundedness_aplicable", "retrieval_groundedness", CON_RESPUESTA),
+        ("correctness_sin_adversarias", "correctness", SIN_ADVERSARIAS),
+    ]:
+        notas = notas_por_tipo(traces, juez, tipos)
+        if notas:
+            mlflow.log_metric(f"{metrica}/mean", sum(notas) / len(notas))
+            mlflow.log_metric(f"{metrica}/n", len(notas))
+    # Notas válidas por juez: el promedio de MLflow no cuenta los errores
+    for juez in ("neutralidad_politica", "safety"):
+        mlflow.log_metric(f"{juez}/n", len(notas_por_tipo(traces, juez, TODAS)))
 
 
 def main():
@@ -123,7 +155,7 @@ def main():
         return result["answer"]
 
     run_name = f"{describe()['llm_provider']}|{prompt_uri.replace('prompts:/', '')}|k{K}"
-    with mlflow.start_run(run_name=run_name):
+    with mlflow.start_run(run_name=run_name) as run:
         mlflow.log_params({
             **app_config(prompt_uri, K),
             "chunk_size": CHUNK_SIZE,
@@ -137,9 +169,11 @@ def main():
             scorers=scorers,
             model_id=model_id,
         )
+        log_metricas_por_tipo(run)
 
+    metrics = mlflow.get_run(run.info.run_id).data.metrics
     print("\n📈 Resultados agregados:")
-    for name, value in sorted(results.metrics.items()):
+    for name, value in sorted(metrics.items()):
         print(f"   {name:40s} {value:.2f}" if isinstance(value, (int, float)) else f"   {name}: {value}")
     print(f"\n🔎 Detalle por pregunta (trazas + razonamiento de cada juez): mlflow ui → "
           f"experimento '{EVAL_EXPERIMENT}' → run '{run_name}'")

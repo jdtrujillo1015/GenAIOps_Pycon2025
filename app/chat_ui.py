@@ -30,9 +30,9 @@ from app.tracking import CHAT_EXPERIMENT, init_tracking, log_user_feedback
 
 EVAL_DATASET = "tests/eval_dataset.json"
 FALLBACK_EXAMPLES = [
-    "¿Qué beneficios de salud ofrece la empresa?",
-    "¿Qué incluye el programa PerksPlus?",
-    "¿Cuáles son las responsabilidades de un analista de datos?",
+    "¿Cuál es el objetivo del componente Seguridad integral para el desarrollo social?",
+    "¿Qué fenómenos analiza el diagnóstico del PISCC 2024-2027?",
+    "¿Qué dice el diagnóstico de la política pública sobre la migración en Medellín?",
 ]
 
 
@@ -148,7 +148,7 @@ def render_sidebar():
         format_func=lambda o: o.replace("prompts:/", ""),
         help="@alias o versión fija. Registra cambios con `python -m app.prompt_registry`",
     )
-    k = st.sidebar.slider("Fragmentos a recuperar (k)", 1, 10, 4,
+    k = st.sidebar.slider("Resultados por búsqueda (k)", 1, 10, 6,
                           help="Cuántos fragmentos de los PDFs se envían al LLM como contexto")
 
     st.sidebar.button("🗑️ Nueva conversación", width="stretch",
@@ -159,8 +159,8 @@ def render_sidebar():
 
 # ---------- Chat ----------
 
-def render_chat(title="🤖 Asistente de Recursos Humanos",
-                subtitle="Pregunta sobre beneficios, políticas y roles de Contoso Electronics."):
+def render_chat(title="🛡️ Asistente de Seguridad y Convivencia",
+                subtitle="Consulta el PISCC 2024-2027, el diagnóstico de la política pública y el Plan de Desarrollo en seguridad."):
     config = render_sidebar()
 
     st.title(title)

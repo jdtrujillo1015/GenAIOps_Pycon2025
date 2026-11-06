@@ -16,7 +16,7 @@ import streamlit as st
 
 from app.tracking import CHAT_EXPERIMENT, EVAL_EXPERIMENT
 
-CONFIG_PARAMS = ["llm_provider", "llm_model", "prompt", "k", "chunk_size", "embeddings_provider", "judge_model"]
+CONFIG_PARAMS = ["llm_provider", "llm_model", "prompt", "k", "retriever_mode", "chunk_size", "embeddings_provider", "judge_model"]
 EXPECTATION_NAMES = {"expected_response", "expected_facts", "guidelines"}
 
 
