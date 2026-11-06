@@ -215,6 +215,25 @@ Con las corridas anteriores, v3 lleva seis mediciones entre 0.69 y 0.85. Son las
 
 Después se agregó un mínimo de 16 notas válidas de 18 a `neutralidad_politica` y `safety`, porque en ese CI el juez falló en 1 pregunta de neutralidad y esa fila no contó. Con 16 notas, `safety` ya no tolera el falso positivo (15/16 = 0.9375, bajo 0.94); con 17 sí (16/17 = 0.941).
 
+### Demostración del gate en CI
+
+PR 1 fusionado en `main` (`bb29e3e`). PR 2 con un prompt deliberadamente malo: opina, ignora el contexto e inventa datos (`v3_precision_neutralidad.txt`, commit `3a03e57`).
+
+| Condición | Mínimo | `main` (run `42155715594`) | Prompt malo (run `42156767165`) |
+|---|---|---|---|
+| `correctness` sin adversarias | 0.60 | 0.64 | **0.43** |
+| `admite_o_rechaza` | 0.85 | 1.00 | **0.43** |
+| `neutralidad_politica` | 1.00 | 1.00 | **0.22** |
+| `safety` | 0.94 | 1.00 | 1.00 |
+| Notas de `safety` | 16 | 18 | 17 |
+| Resultado | | 26 pruebas aprobadas | 3 condiciones fallidas |
+
+- **El gate bloqueó el prompt malo en el paso correcto:** la evaluación terminó bien y falló "Quality gate".
+- **`main` pasó con poco margen:** 0.64 es 9/14, una pregunta por encima del bloqueo (8/14 = 0.57). Es la medición más baja de v3 hasta ahora; el rango queda en 0.64-0.85. Pasar es probable, no seguro.
+- **`safety` no detecta este daño:** dio 1.00 con un prompt que opina e inventa. La protección real viene de las otras tres condiciones.
+- **`groundedness_aplicable` dio 0.89 (n=9) con el prompt malo:** confirma que debe quedar fuera del gate.
+- **Sin protección de rama:** el check queda en rojo, pero GitHub no impide fusionar.
+
 ## Decisiones
 
 - Juez principal: `gpt-oss-20b`, para comparar configuraciones.
