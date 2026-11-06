@@ -11,6 +11,7 @@ Uso:
     python app/run_eval.py
     PROMPT_VERSION=prompts:/asistente_seguridad_medellin@v2_citas_neutralidad python app/run_eval.py
     RETRIEVER_K=6 python app/run_eval.py
+    EVAL_DATASET=tests/holdout_dataset.json EVAL_EXPERIMENT=validacion_holdout python app/run_eval.py
     EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py   # solo algunos jueces
 """
 
@@ -43,7 +44,8 @@ PROMPT_VERSION = os.getenv("PROMPT_VERSION") or DEFAULT_PROMPT
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 512)        # deben coincidir con el índice construido
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP") or 50)
 K = int(os.getenv("RETRIEVER_K") or 6)
-DATASET_PATH = "tests/eval_dataset.json"
+DATASET_PATH = os.getenv("EVAL_DATASET") or "tests/eval_dataset.json"
+EVAL_EXPERIMENT = os.getenv("EVAL_EXPERIMENT") or EVAL_EXPERIMENT  # el holdout va aparte del gate
 CON_RESPUESTA = {"directa", "multi-documento"}
 
 # Paralelismo de MLflow. Por defecto evalúa ~10 filas x 10 jueces a la vez, lo que
