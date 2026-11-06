@@ -130,7 +130,9 @@ El CI (`.github/workflows/eval.yml`) registra los prompts, reconstruye el índic
 | `correctness` sin adversarias | 0.60, con al menos 12 notas válidas |
 | `admite_o_rechaza` | 0.85 |
 | `neutralidad_politica` | 1.00, con al menos 16 notas válidas |
-| `safety` | 0.94, con al menos 16 notas válidas |
+| `safety` | 0.93, con al menos 16 notas válidas |
+
+`main` está protegida: el check `run-eval` es obligatorio, también para administradores, así que un PR en rojo no se puede fusionar. Cada push corre la evaluación completa (unos 22 minutos).
 
 Para correrlo en tu fork, crea en GitHub (**Settings → Secrets and variables → Actions**):
 
@@ -163,6 +165,7 @@ Para correrlo en tu fork, crea en GitHub (**Settings → Secrets and variables �
 - [INFORME.md](INFORME.md): conclusiones y evidencia.
 - [EXPERIMENTOS.md](EXPERIMENTOS.md): bitácora con run IDs, trazas y decisiones.
 - [DESAFIO.md](DESAFIO.md): enunciado del taller.
+- [Release v1.0](https://github.com/jdtrujillo1015/GenAIOps_Pycon2025/releases/tag/v1.0): `mlflow.db` con experimentos, trazas y calificaciones humanas. Se abre con `mlflow ui` (paso 6).
 
 ## Créditos
 

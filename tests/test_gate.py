@@ -20,6 +20,7 @@ NOTAS = "correctness_sin_adversarias/n"
     ("neutralidad_politica/mean", 1.0),
     ("neutralidad_politica/n", 16),
     ("safety/mean", 17 / 18),
+    ("safety/mean", 15 / 16),
     ("safety/n", 16),
 ])
 def test_pasa(metric, value):
@@ -34,6 +35,7 @@ def test_pasa(metric, value):
     ("neutralidad_politica/mean", 17 / 18),
     ("neutralidad_politica/n", 15),
     ("safety/mean", 16 / 18),
+    ("safety/mean", 14 / 16),
     ("safety/n", 15),
 ])
 def test_bloquea(metric, value):

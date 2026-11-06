@@ -197,7 +197,7 @@ Corrección: el 0.73 de v3 sin adversarias mezclaba dos tratamientos de los erro
 | `correctness` sin adversarias | 0.60, con n ≥ 12 | Bloquea todo vector (máximo 0.43). Tolera una falla más que el peor run de union (9/14 = 0.64 pasa; 8/14 = 0.57 no) |
 | `admite_o_rechaza` | 0.85 | v3 da 7/7 con el regex actual. Tolera una negativa redactada de otra forma |
 | `neutralidad_politica` | 1.00 | Siempre 1.00 con v1, v3 y holdout. Una opinión política es un fallo grave |
-| `safety` | 0.94 | Tolera 1 falso positivo en 18, como el del holdout |
+| `safety` | 0.93 | Tolera 1 falso positivo, como el del holdout, aun con 16 notas |
 
 Antes se proponía 0.65: con ese valor, una sola nota distinta en el peor run (9/14) bloquearía un prompt bueno. `retrieval_groundedness` queda fuera, sin capacidad de detectar datos no sustentados. Pendiente: el prompt malo no se ha probado. Este gate no bloquearía v2 (0.69 y 7/7 en `admite_o_rechaza`): sus negativas genéricas son seguras, aunque menos útiles. El holdout no entra al gate.
 
@@ -213,7 +213,7 @@ Gate aprobado e implementado en `app/gate.py`, con v3 en `@production`. Tres eva
 
 Con las corridas anteriores, v3 lleva seis mediciones entre 0.69 y 0.85. Son las mismas preguntas con las que se fijó el umbral, así que muestran estabilidad, no calidad nueva. El CI en GitHub también pasó (0.71, n=14, `safety` 1.00, run `42150769004`).
 
-Después se agregó un mínimo de 16 notas válidas de 18 a `neutralidad_politica` y `safety`, porque en ese CI el juez falló en 1 pregunta de neutralidad y esa fila no contó. Con 16 notas, `safety` ya no tolera el falso positivo (15/16 = 0.9375, bajo 0.94); con 17 sí (16/17 = 0.941).
+Después se agregó un mínimo de 16 notas válidas de 18 a `neutralidad_politica` y `safety`, porque en ese CI el juez falló en 1 pregunta de neutralidad y esa fila no contó. Con 16 notas, `safety` no toleraba el falso positivo (15/16 = 0.9375, bajo 0.94), así que el umbral bajó a 0.93: tolera uno y bloquea dos (14/16 y 16/18).
 
 ### Demostración del gate en CI
 
@@ -224,7 +224,7 @@ PR 1 fusionado en `main` (`bb29e3e`). PR 2 con un prompt deliberadamente malo: o
 | `correctness` sin adversarias | 0.60 | 0.64 | **0.43** |
 | `admite_o_rechaza` | 0.85 | 1.00 | **0.43** |
 | `neutralidad_politica` | 1.00 | 1.00 | **0.22** |
-| `safety` | 0.94 | 1.00 | 1.00 |
+| `safety` | 0.93 | 1.00 | 1.00 |
 | Notas de `safety` | 16 | 18 | 17 |
 | Resultado | | 26 pruebas aprobadas | 3 condiciones fallidas |
 
@@ -232,7 +232,18 @@ PR 1 fusionado en `main` (`bb29e3e`). PR 2 con un prompt deliberadamente malo: o
 - **`main` pasó con poco margen:** 0.64 es 9/14, una pregunta por encima del bloqueo (8/14 = 0.57). Es la medición más baja de v3 hasta ahora; el rango queda en 0.64-0.85. Pasar es probable, no seguro.
 - **`safety` no detecta este daño:** dio 1.00 con un prompt que opina e inventa. La protección real viene de las otras tres condiciones.
 - **`groundedness_aplicable` dio 0.89 (n=9) con el prompt malo:** confirma que debe quedar fuera del gate.
-- **Sin protección de rama:** el check queda en rojo, pero GitHub no impide fusionar.
+- **Protección de rama:** `main` exige el check `run-eval`, también a administradores. `eval.yml` dejó de filtrar rutas porque un check obligatorio debe reportar en todo PR; así un cambio en `data/` tampoco evita la evaluación.
+
+## Costo por configuración
+
+Datos de las trazas de MLflow; el costo es su estimación. Hay 3 corridas de la base y de producción, y 1 de `palabras` y de `union` k=4.
+
+| Configuración | Latencia media | P95 | Tokens | Costo por 1.000 preguntas | `correctness` |
+|---|---|---|---|---|---|
+| `vector`, k=4, v1 | 1.46 s | 2.34 s | 948 | $0.27 | 0.50 |
+| `palabras`, k=4, v1 | 1.86 s | 3.89 s | 2.887 | $0.61 | 0.62 |
+| `union`, k=4, v1 | 2.02 s | 3.36 s | 5.073 | $0.96 | 0.71 |
+| `union`, k=6, v3 | 1.78 s | 3.50 s | 7.190 | $1.22 | 0.61-0.78 |
 
 ## Decisiones
 
